@@ -5,7 +5,7 @@ const Payroll: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [periodFilter, setPeriodFilter] = useState<string>('current');
 
-  const payrollData = [
+  const defaultPayrollData = [
     {
       id: 'PAY-001',
       employeeName: 'Sarah Johnson',
@@ -73,7 +73,74 @@ const Payroll: React.FC = () => {
     }
   ];
 
-  const filteredPayroll = payrollData.filter(payroll => {
+  const [payrollData, setPayrollData] = useState(() => {
+    const saved = localStorage.getItem('payrollData');
+    return saved ? JSON.parse(saved) : defaultPayrollData;
+  });
+
+  // Persist payroll data
+  React.useEffect(() => {
+    localStorage.setItem('payrollData', JSON.stringify(payrollData));
+  }, [payrollData]);
+
+  const [showProcessModal, setShowProcessModal] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newEmployee, setNewEmployee] = useState({
+    employeeName: '',
+    role: '',
+    baseSalary: '',
+    commission: '',
+    bonus: '',
+    deductions: '',
+    payPeriod: ''
+  });
+
+  // Export CSV
+  const handleExport = () => {
+    const headers = ['ID','Employee Name','Role','Base Salary','Commission','Bonus','Deductions','Net Pay','Pay Period','Status','Pay Date'];
+    const rows = filteredPayroll.map((p: any) => [
+      p.id,
+      p.employeeName,
+      p.role,
+      p.baseSalary,
+      p.commission,
+      p.bonus,
+      p.deductions,
+      p.netPay,
+      p.payPeriod,
+      p.status,
+      p.payDate
+    ]);
+    const csv = [headers, ...rows].map((r: any[]) => r.map((x: any) => `"${x}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'payroll.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Process Payroll
+  const handleProcessPayroll = () => {
+    setShowProcessModal(true);
+  };
+
+  const confirmProcessPayroll = () => {
+    setProcessing(true);
+    setTimeout(() => {
+      setPayrollData((prev: any[]) => prev.map((p: any) =>
+        (p.status === 'pending' || p.status === 'processing')
+          ? { ...p, status: 'paid', payDate: new Date().toISOString().slice(0,10) }
+          : p
+      ));
+      setProcessing(false);
+      setShowProcessModal(false);
+    }, 1200);
+  };
+
+  const filteredPayroll = payrollData.filter((payroll: any) => {
     const matchesSearch = payroll.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          payroll.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          payroll.id.toLowerCase().includes(searchTerm.toLowerCase());
@@ -89,10 +156,9 @@ const Payroll: React.FC = () => {
     }
   };
 
-  const totalPayroll = filteredPayroll.reduce((sum, payroll) => sum + payroll.netPay, 0);
-  const totalCommissions = filteredPayroll.reduce((sum, payroll) => sum + payroll.commission, 0);
-  const totalBonuses = filteredPayroll.reduce((sum, payroll) => sum + payroll.bonus, 0);
-
+  const totalPayroll = filteredPayroll.reduce((sum: number, payroll: any) => sum + payroll.netPay, 0);
+  const totalCommissions = filteredPayroll.reduce((sum: number, payroll: any) => sum + payroll.commission, 0);
+  const totalBonuses = filteredPayroll.reduce((sum: number, payroll: any) => sum + payroll.bonus, 0);
   return (
     <div className="h-full bg-white overflow-auto">
       <div className="p-8 space-y-8">
@@ -103,14 +169,162 @@ const Payroll: React.FC = () => {
             <p className="text-gray-600">Manage employee compensation and payments</p>
           </div>
           <div className="flex items-center gap-3">
-            <button className="btn-secondary flex items-center gap-2">
-              <Download size={20} />
-              Export
-            </button>
-            <button className="btn-primary flex items-center gap-2">
-              <Plus size={20} />
-              Process Payroll
-            </button>
+          <button
+            className="bg-blue-600 text-white px-5 py-2.5 rounded-lg flex items-center gap-2 shadow-md font-semibold transition-colors hover:bg-blue-700"
+            onClick={handleExport}
+          >
+            <Download size={18} className="mr-2" />
+            Export
+          </button>
+          <button
+            className="bg-blue-600 text-white px-5 py-2.5 rounded-lg flex items-center gap-2 shadow-md font-semibold transition-colors hover:bg-blue-700"
+            onClick={handleProcessPayroll}
+          >
+            <Plus size={18} className="mr-2" />
+            Process Payroll
+          </button>
+          <button
+            className="bg-blue-600 text-white px-5 py-2.5 rounded-lg flex items-center gap-2 shadow-md font-semibold transition-colors hover:bg-blue-700"
+            onClick={() => setShowAddModal(true)}
+          >
+            <Plus size={18} className="mr-2" />
+    Add Payroll
+          </button>
+        {/* Process Payroll Modal */}
+        {showProcessModal && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
+            <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
+              <h3 className="text-lg font-semibold text-black mb-4">Process Payroll</h3>
+              <p className="mb-4 text-gray-700">Are you sure you want to process payroll for all employees with status <span className="font-semibold">pending</span> or <span className="font-semibold">processing</span>? This will mark them as <span className="font-semibold text-emerald-700">paid</span> and set pay date to today.</p>
+              <div className="flex gap-3 mt-4">
+                <button
+                  className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-blue-700 disabled:opacity-60"
+                  onClick={confirmProcessPayroll}
+                  disabled={processing}
+                >
+                  {processing ? 'Processing...' : 'Yes, Process'}
+                </button>
+                <button
+                  className="bg-gray-200 text-gray-700 px-5 py-2 rounded-lg font-semibold hover:bg-gray-300"
+                  onClick={() => setShowProcessModal(false)}
+                  disabled={processing}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Add Employee Modal */}
+        {showAddModal && (
+          <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
+            <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
+      <h3 className="text-lg font-semibold text-black mb-4">Add New Payroll</h3>
+              <form onSubmit={e => {
+                e.preventDefault();
+                if (!newEmployee.employeeName || !newEmployee.role || !newEmployee.baseSalary || !newEmployee.payPeriod) return;
+                setPayrollData((prev: any[]) => [
+                  ...prev,
+                  {
+                    id: `PAY-${(prev.length+1).toString().padStart(3,'0')}`,
+                    employeeName: newEmployee.employeeName,
+                    role: newEmployee.role,
+                    baseSalary: Number(newEmployee.baseSalary),
+                    commission: Number(newEmployee.commission) || 0,
+                    bonus: Number(newEmployee.bonus) || 0,
+                    deductions: Number(newEmployee.deductions) || 0,
+                    netPay: Number(newEmployee.baseSalary) + (Number(newEmployee.commission)||0) + (Number(newEmployee.bonus)||0) - (Number(newEmployee.deductions)||0),
+                    payPeriod: newEmployee.payPeriod,
+                    status: 'pending',
+                    payDate: '',
+                  }
+                ]);
+                setShowAddModal(false);
+                setNewEmployee({ employeeName: '', role: '', baseSalary: '', commission: '', bonus: '', deductions: '', payPeriod: '' });
+              }}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Employee Name</label>
+                    <input
+                      type="text"
+                      placeholder="Enter name"
+                      value={newEmployee.employeeName}
+                      onChange={e => setNewEmployee({ ...newEmployee, employeeName: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                    <input
+                      type="text"
+                      placeholder="Enter role"
+                      value={newEmployee.role}
+                      onChange={e => setNewEmployee({ ...newEmployee, role: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Base Salary</label>
+                    <input
+                      type="number"
+                      placeholder="Enter base salary"
+                      value={newEmployee.baseSalary}
+                      onChange={e => setNewEmployee({ ...newEmployee, baseSalary: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Commission</label>
+                    <input
+                      type="number"
+                      placeholder="Enter commission (optional)"
+                      value={newEmployee.commission}
+                      onChange={e => setNewEmployee({ ...newEmployee, commission: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Bonus</label>
+                    <input
+                      type="number"
+                      placeholder="Enter bonus (optional)"
+                      value={newEmployee.bonus}
+                      onChange={e => setNewEmployee({ ...newEmployee, bonus: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Deductions</label>
+                    <input
+                      type="number"
+                      placeholder="Enter deductions (optional)"
+                      value={newEmployee.deductions}
+                      onChange={e => setNewEmployee({ ...newEmployee, deductions: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Pay Period</label>
+                    <input
+                      type="month"
+                      value={newEmployee.payPeriod}
+                      onChange={e => setNewEmployee({ ...newEmployee, payPeriod: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black"
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-3 mt-4">
+                  <button type="submit" className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-blue-700">Add</button>
+                  <button type="button" className="bg-gray-200 text-gray-700 px-5 py-2 rounded-lg font-semibold hover:bg-gray-300" onClick={() => setShowAddModal(false)}>Cancel</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
           </div>
         </div>
 
@@ -127,7 +341,6 @@ const Payroll: React.FC = () => {
               </div>
             </div>
           </div>
-
           <div className="card p-6">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -139,7 +352,6 @@ const Payroll: React.FC = () => {
               </div>
             </div>
           </div>
-
           <div className="card p-6">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -151,7 +363,6 @@ const Payroll: React.FC = () => {
               </div>
             </div>
           </div>
-
           <div className="card p-6">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -166,24 +377,23 @@ const Payroll: React.FC = () => {
         </div>
 
         {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col md:flex-row gap-4 md:items-center mb-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
             <input
               type="text"
               placeholder="Search employees..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="form-input pl-10"
+              className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-300 text-black placeholder-gray-500 transition"
             />
           </div>
-          
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+          <div className="relative min-w-[180px]">
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
             <select
               value={periodFilter}
               onChange={(e) => setPeriodFilter(e.target.value)}
-              className="form-input pl-10 pr-8 appearance-none"
+              className="w-full pl-10 pr-8 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-300 text-black transition appearance-none"
             >
               <option value="current">Current Period</option>
               <option value="previous">Previous Period</option>
@@ -223,7 +433,7 @@ const Payroll: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
-                {filteredPayroll.map((payroll) => (
+        {filteredPayroll.map((payroll: any) => (
                   <tr key={payroll.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">

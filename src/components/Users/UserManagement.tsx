@@ -4,7 +4,7 @@ import { Search, Plus, Shield, Edit, Trash2 } from 'lucide-react';
 const UserManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
-  const users = [
+  const [users, setUsers] = useState([
     {
       id: 1,
       name: 'John Smith',
@@ -41,7 +41,31 @@ const UserManagement: React.FC = () => {
       lastLogin: '3 hours ago',
       department: 'Support',
     },
-  ];
+  ]);
+
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newUser, setNewUser] = useState({
+    name: '',
+    email: '',
+    role: 'User',
+    status: 'active',
+    department: '',
+  });
+
+  const handleAddUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newUser.name || !newUser.email || !newUser.department) return;
+    setUsers([
+      ...users,
+      {
+        id: users.length + 1,
+        ...newUser,
+        lastLogin: 'just now',
+      }
+    ]);
+    setShowAddModal(false);
+    setNewUser({ name: '', email: '', role: 'User', status: 'active', department: '' });
+  };
 
   const filteredUsers = users.filter(user =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -67,14 +91,110 @@ const UserManagement: React.FC = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 admin-portal">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">User Management</h1>
-        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
-          <Plus size={20} />
-          Add User
+        <button className="main-action-btn" onClick={() => setShowAddModal(true)}>
+            <Plus size={18} className="mr-2" />
+            <span className="font-semibold">Add User</span>
         </button>
       </div>
+
+      {/* Add User Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+          <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Add New User</h2>
+            <form onSubmit={handleAddUser} className="space-y-4">
+              <input
+                type="text"
+                placeholder="Full Name"
+                value={newUser.name}
+                onChange={e => setNewUser({ ...newUser, name: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black"
+                required
+              />
+              <input
+                type="email"
+                placeholder="Email"
+                value={newUser.email}
+                onChange={e => setNewUser({ ...newUser, email: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black"
+                required
+              />
+              <input
+                type="text"
+                placeholder="Department"
+                value={newUser.department}
+                onChange={e => setNewUser({ ...newUser, department: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black"
+                required
+              />
+              <select
+                value={newUser.role}
+                onChange={e => setNewUser({ ...newUser, role: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black"
+              >
+                <option value="User">User</option>
+                <option value="Manager">Manager</option>
+                <option value="Admin">Admin</option>
+              </select>
+              <div className="flex gap-3 mt-4">
+                <button type="submit" className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-blue-700">Add</button>
+                <button type="button" className="bg-gray-200 text-gray-700 px-5 py-2 rounded-lg font-semibold hover:bg-gray-300" onClick={() => setShowAddModal(false)}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add User Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
+          <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Add New User</h2>
+            <form onSubmit={handleAddUser} className="space-y-4">
+              <input
+                type="text"
+                placeholder="Full Name"
+                value={newUser.name}
+                onChange={e => setNewUser({ ...newUser, name: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black"
+                required
+              />
+              <input
+                type="email"
+                placeholder="Email"
+                value={newUser.email}
+                onChange={e => setNewUser({ ...newUser, email: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black"
+                required
+              />
+              <input
+                type="text"
+                placeholder="Department"
+                value={newUser.department}
+                onChange={e => setNewUser({ ...newUser, department: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black"
+                required
+              />
+              <select
+                value={newUser.role}
+                onChange={e => setNewUser({ ...newUser, role: e.target.value })}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black"
+              >
+                <option value="User">User</option>
+                <option value="Manager">Manager</option>
+                <option value="Admin">Admin</option>
+              </select>
+              <div className="flex gap-3 mt-4">
+                <button type="submit" className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-blue-700">Add</button>
+                <button type="button" className="bg-gray-200 text-gray-700 px-5 py-2 rounded-lg font-semibold hover:bg-gray-300" onClick={() => setShowAddModal(false)}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Search Bar */}
       <div className="relative">

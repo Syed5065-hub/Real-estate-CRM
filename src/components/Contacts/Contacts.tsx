@@ -1,10 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Plus, Mail, Phone, MoreVertical } from 'lucide-react';
 
 const Contacts: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newContact, setNewContact] = useState<{
+    name: string;
+    company: string;
+    email: string;
+    phone: string;
+    tags: string[];
+  }>({
+    name: '',
+    company: '',
+    email: '',
+    phone: '',
+    tags: [],
+  });
 
-  const contacts = [
+  const defaultContacts = [
     {
       id: 1,
       name: 'Sarah Johnson',
@@ -47,45 +61,146 @@ const Contacts: React.FC = () => {
     },
   ];
 
-  const filteredContacts = contacts.filter(contact =>
+  const [contacts, setContacts] = useState(() => {
+    const savedContacts = localStorage.getItem('contacts');
+    return savedContacts ? JSON.parse(savedContacts) : defaultContacts;
+  });
+
+  // Load contacts from localStorage on mount
+  useEffect(() => {
+    const savedContacts = localStorage.getItem('contacts');
+    if (savedContacts) {
+      setContacts(JSON.parse(savedContacts));
+    }
+  }, []);
+
+  // Save contacts to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('contacts', JSON.stringify(contacts));
+  }, [contacts]);
+
+  const filteredContacts = contacts.filter((contact: any) =>
     contact.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     contact.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     contact.company.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400';
-      case 'pending': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400';
-      case 'inactive': return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400';
-      default: return 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400';
-    }
-  };
-
-  const getTagColor = (tag: string) => {
-    const colors = {
-      'VIP': 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400',
-      'Enterprise': 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400',
-      'Lead': 'bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-400',
-      'Client': 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400',
-      'Recurring': 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/20 dark:text-indigo-400',
-      'Prospect': 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400',
-    };
-    return colors[tag as keyof typeof colors] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400';
+  const handleAddContact = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newContact.name || !newContact.email || !newContact.company) return;
+    setContacts([
+      ...contacts,
+      {
+        id: contacts.length + 1,
+        ...newContact,
+        status: 'active',
+        lastContact: 'today',
+      }
+    ]);
+    setShowAddModal(false);
+    setNewContact({ name: '', company: '', email: '', phone: '', tags: [] });
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
-        <div>
-          <h1 className="text-3xl font-bold text-black">Contacts</h1>
-          <p className="text-gray-600 text-base mt-1">Manage and view all contacts</p>
-        </div>
-        <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors">
-          <Plus size={20} />
-          Add Contact
+    <div className="p-4 sm:p-6 space-y-6 client-portal min-h-screen bg-white">
+      {/* Heading and subheading to match User Management */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-2">
+        <h2 className="text-2xl font-bold text-black">Contacts</h2>
+        <button
+          type="button"
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 flex items-center gap-2"
+          onClick={() => setShowAddModal(true)}
+        >
+          <Plus size={18} /> Add Contact
         </button>
       </div>
+
+      {/* Add Contact Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold text-black mb-4">Add New Contact</h3>
+            <form onSubmit={handleAddContact}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                  <input
+                    type="text"
+                    placeholder="Enter name"
+                    value={newContact.name}
+                    onChange={e => setNewContact({ ...newContact, name: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Company</label>
+                  <input
+                    type="text"
+                    placeholder="Enter company"
+                    value={newContact.company}
+                    onChange={e => setNewContact({ ...newContact, company: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <input
+                    type="email"
+                    placeholder="Enter email"
+                    value={newContact.email}
+                    onChange={e => setNewContact({ ...newContact, email: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                  <input
+                    type="text"
+                    placeholder="Enter phone number"
+                    value={newContact.phone}
+                    onChange={e => setNewContact({ ...newContact, phone: e.target.value })}
+                    className="w-full border border-gray-300 rounded-lg px-4 py-2 text-black"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['VIP', 'Enterprise', 'Lead', 'Client', 'Recurring', 'Prospect'].map(tag => (
+                      <button
+                        type="button"
+                        key={tag}
+                        className={`px-3 py-1 rounded-full text-xs font-medium border transition ${newContact.tags.includes(tag) ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-100 text-gray-700 border-gray-300'}`}
+                    onClick={() => {
+                      if (newContact.tags.includes(tag)) {
+                        setNewContact({
+                          ...newContact,
+                          tags: newContact.tags.filter(t => t !== tag)
+                        });
+                      } else if (newContact.tags.length < 2) {
+                        setNewContact({
+                          ...newContact,
+                          tags: [...newContact.tags, tag]
+                        });
+                      }
+                    }}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-3 mt-4">
+                <button type="submit" className="bg-blue-600 text-white px-5 py-2 rounded-lg font-semibold hover:bg-blue-700">Add</button>
+                <button type="button" className="bg-gray-200 text-gray-700 px-5 py-2 rounded-lg font-semibold hover:bg-gray-300" onClick={() => setShowAddModal(false)}>Cancel</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Search Bar */}
       <div className="flex flex-col sm:flex-row gap-4">
@@ -103,7 +218,7 @@ const Contacts: React.FC = () => {
 
       {/* Contacts Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredContacts.map((contact) => (
+        {filteredContacts.map((contact: any) => (
           <div key={contact.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
@@ -141,7 +256,7 @@ const Contacts: React.FC = () => {
             </div>
 
             <div className="flex flex-wrap gap-2">
-              {contact.tags.map((tag, index) => (
+              {contact.tags.map((tag: string, index: number) => (
                 <span key={index} className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800`}>
                   {tag}
                 </span>

@@ -157,9 +157,9 @@ const Meetings: React.FC = () => {
               </button>
             </div>
             {portal !== 'client' && (
-              <button className="btn-primary flex items-center gap-2">
-                <Plus size={20} />
-                Schedule Meeting
+              <button className="main-action-btn">
+                <Plus size={18} className="mr-2" />
+                <span className="font-semibold">Schedule Meeting</span>
               </button>
             )}
           </div>
@@ -207,11 +207,11 @@ const Meetings: React.FC = () => {
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
             <input
               type="text"
               placeholder="Search meetings..."
-              className="form-input pl-10"
+              className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-black placeholder-gray-500"
             />
           </div>
           

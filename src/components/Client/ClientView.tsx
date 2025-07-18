@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Heart, X, Star, MapPin, Bed, Bath, Square, ArrowLeft, Filter } from 'lucide-react';
 import { Property } from '../../types';
 
@@ -96,39 +96,24 @@ const ClientView: React.FC = () => {
     },
   ];
 
-  const currentProperty = properties[currentPropertyIndex];
-  const shortlistedProperties = properties.filter(prop => shortlisted.includes(prop.id));
+  const [visibleProperties, setVisibleProperties] = useState<Property[]>(properties);
+  const shortlistedProperties = visibleProperties.filter(prop => shortlisted.includes(prop.id));
+  const [liked, setLiked] = useState<string[]>([]);
 
-  const animateCard = (direction: 'left' | 'right') => {
-    if (isAnimating || !cardRef.current) return;
-    
-    setIsAnimating(true);
-    cardRef.current.classList.add(`swipe-${direction}`);
-    
-    setTimeout(() => {
-      if (currentPropertyIndex < properties.length - 1) {
-        setCurrentPropertyIndex(currentPropertyIndex + 1);
-      }
-      if (cardRef.current) {
-        cardRef.current.classList.remove(`swipe-${direction}`);
-      }
-      setIsAnimating(false);
-    }, 300);
+  const handleReject = (id: string) => {
+    setVisibleProperties(prev => prev.filter(p => p.id !== id));
   };
 
-  const handleReject = () => {
-    animateCard('left');
+  const handleLike = (id: string) => {
+    setLiked(prev => prev.includes(id) ? prev.filter(l => l !== id) : [...prev, id]);
   };
 
-  const handleLike = () => {
-    animateCard('right');
-  };
-
-  const handleSuperLike = () => {
-    if (shortlisted.length < 7 && !shortlisted.includes(currentProperty.id)) {
-      setShortlisted([...shortlisted, currentProperty.id]);
+  const handleSuperLike = (id: string) => {
+    if (shortlisted.includes(id)) {
+      setShortlisted(shortlisted.filter(sid => sid !== id));
+    } else if (shortlisted.length < 7) {
+      setShortlisted([...shortlisted, id]);
     }
-    animateCard('right');
   };
 
   if (showShortlisted) {
@@ -224,6 +209,14 @@ const ClientView: React.FC = () => {
                       <button className="btn btn-primary flex-1">
                         Contact Realtor
                       </button>
+                      <button
+                        className="btn btn-danger flex-1"
+                        onClick={() => {
+                          setShortlisted(prev => prev.filter(id => id !== property.id));
+                        }}
+                      >
+                        Remove from Shortlist
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -271,140 +264,109 @@ const ClientView: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="p-6 max-w-md mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-emerald-50 py-8 px-2">
+      <div className="w-full max-w-3xl mx-auto space-y-8">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Find Your Home</h1>
-            <p className="text-gray-600">Swipe to discover properties</p>
+            <h1 className="text-3xl font-bold text-emerald-700">Browse Properties</h1>
+            <p className="text-gray-600">View all available properties in a list</p>
           </div>
           <div className="flex items-center gap-3">
-            <button className="btn-ghost p-2">
+            <button className="bg-white border border-gray-200 rounded-lg p-2 shadow hover:bg-gray-50 transition">
               <Filter size={20} />
             </button>
             <button
               onClick={() => setShowShortlisted(true)}
-              className="btn btn-primary text-sm"
+              className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-semibold shadow hover:bg-emerald-700 transition text-sm"
             >
               Saved ({shortlistedProperties.length})
             </button>
           </div>
         </div>
 
-        {/* Progress */}
-        <div className="flex items-center gap-2">
-          <div className="flex-1 bg-gray-200 rounded-full h-2">
-            <div 
-              className="bg-gradient-to-r from-emerald-500 to-emerald-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${((currentPropertyIndex + 1) / properties.length) * 100}%` }}
-            />
-          </div>
-          <span className="text-sm text-gray-500 font-medium">
-            {currentPropertyIndex + 1}/{properties.length}
-          </span>
-        </div>
-
-        {/* Property Card */}
-        <div className="relative">
-          <div 
-            ref={cardRef}
-            className="property-card swipe-card max-w-sm mx-auto"
-          >
-            <div className="relative">
-              <img
-                src={currentProperty.image}
-                alt={currentProperty.title}
-                className="w-full h-80 object-cover"
-              />
-              <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg">
-                <span className="text-xl font-bold text-gray-900">{currentProperty.price}</span>
-              </div>
-              {shortlisted.includes(currentProperty.id) && (
-                <div className="absolute top-4 left-4 badge badge-success shadow-lg">
-                  ⭐ Shortlisted
+        {/* List View of Properties */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {visibleProperties.map((property, idx) => (
+            <div key={property.id} className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200 flex flex-col">
+              <div className="relative">
+                <img
+                  src={property.image}
+                  alt={property.title}
+                  className="w-full h-56 object-cover"
+                />
+                <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg">
+                  <span className="text-xl font-bold text-emerald-700">{property.price}</span>
                 </div>
-              )}
+                {shortlisted.includes(property.id) && (
+                  <div className="absolute top-4 left-4 bg-emerald-600 text-white px-3 py-1 rounded-full shadow-lg text-xs font-bold">
+                    Shortlisted
+                  </div>
+                )}
+              </div>
+              <div className="p-6 space-y-4 flex-1">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-1">{property.title}</h2>
+                  <div className="flex items-center gap-2 text-gray-600">
+                    <MapPin size={18} />
+                    <span className="text-base">{property.location}</span>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-6 text-gray-600">
+                  <div className="flex items-center gap-2">
+                    <Bed size={18} />
+                    <span className="font-medium">{property.bedrooms} bed</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Bath size={18} />
+                    <span className="font-medium">{property.bathrooms} bath</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Square size={18} />
+                    <span className="font-medium">{property.area}</span>
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {property.features.map((feature, index) => (
+                    <span
+                      key={index}
+                      className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-xs font-medium"
+                    >
+                      {feature}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <div className="flex items-center justify-center gap-4 p-4 border-t bg-gray-50">
+                <button
+                  onClick={() => handleReject(property.id)}
+                  className="bg-red-100 text-red-600 rounded-full p-3 shadow hover:bg-red-200 transition"
+                  aria-label="Reject property"
+                >
+                  <X size={22} />
+                </button>
+                <button
+                  onClick={() => handleSuperLike(property.id)}
+                  className="bg-yellow-100 text-yellow-700 rounded-full p-3 shadow hover:bg-yellow-200 transition"
+                  aria-label="Super like property (add to shortlist)"
+                  disabled={shortlisted.length >= 7}
+                >
+                  <Star size={22} />
+                </button>
+                <button
+                  onClick={() => handleLike(property.id)}
+                  className={`rounded-full p-3 shadow transition border-2 ${liked.includes(property.id)
+                    ? 'bg-emerald-500 text-white border-emerald-600'
+                    : 'bg-emerald-100 text-gray-400 border-emerald-100 hover:bg-emerald-200'}`}
+                  aria-label="Like property"
+                >
+                  {liked.includes(property.id)
+                    ? <Heart size={22} fill="currentColor" />
+                    : <Heart size={22} />}
+                </button>
+              </div>
             </div>
-
-            <div className="p-6 space-y-4">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-1">{currentProperty.title}</h2>
-                <div className="flex items-center gap-2 text-gray-600">
-                  <MapPin size={16} />
-                  <span>{currentProperty.location}</span>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-6 text-gray-600">
-                <div className="flex items-center gap-2">
-                  <Bed size={16} />
-                  <span>{currentProperty.bedrooms} bed</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Bath size={16} />
-                  <span>{currentProperty.bathrooms} bath</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Square size={16} />
-                  <span>{currentProperty.area}</span>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                {currentProperty.features.map((feature, index) => (
-                  <span
-                    key={index}
-                    className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm font-medium"
-                  >
-                    {feature}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex items-center justify-center gap-6 py-4">
-          <button
-            onClick={handleReject}
-            disabled={isAnimating}
-            className="action-btn action-btn-reject"
-            aria-label="Reject property"
-          >
-            <X size={24} />
-          </button>
-          
-          <button
-            onClick={handleSuperLike}
-            disabled={isAnimating || shortlisted.length >= 7}
-            className="action-btn action-btn-super"
-            aria-label="Super like property (add to shortlist)"
-          >
-            <Star size={24} />
-          </button>
-          
-          <button
-            onClick={handleLike}
-            disabled={isAnimating}
-            className="action-btn action-btn-like"
-            aria-label="Like property"
-          >
-            <Heart size={24} />
-          </button>
-        </div>
-
-        {/* Instructions */}
-        <div className="text-center space-y-2">
-          <p className="text-sm text-gray-500">
-            ❌ Pass • ⭐ Save to shortlist • ❤️ Like
-          </p>
-          {shortlisted.length >= 7 && (
-            <p className="text-sm text-amber-600 font-medium">
-              Shortlist full (7/7) - View saved properties
-            </p>
-          )}
+          ))}
         </div>
       </div>
     </div>

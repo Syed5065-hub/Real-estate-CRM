@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { User, Bell, Shield, Globe, Palette, Save, Building, Mail, Phone, MapPin } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { User, Bell, Shield, Palette, Building, Mail, Phone, MapPin } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Settings: React.FC = () => {
@@ -14,84 +14,170 @@ const Settings: React.FC = () => {
     ...(portal === 'admin' ? [{ id: 'company', label: 'Company', icon: Building }] : []),
   ];
 
-  const ProfileTab = () => (
-    <div className="space-y-6">
+  const ProfileTab = () => {
+    const [photo, setPhoto] = useState<string>(() => localStorage.getItem('profilePhoto') || '');
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    React.useEffect(() => {
+      const savedPhoto = localStorage.getItem('profilePhoto');
+      if (savedPhoto) setPhoto(savedPhoto);
+    }, []);
+
+    const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const selectedFile = event.target.files?.[0];
+      if (selectedFile) {
+        const reader = new FileReader();
+        reader.onload = (ev: ProgressEvent<FileReader>) => {
+          const result = ev.target?.result;
+          if (typeof result === 'string') {
+            setPhoto(result);
+            localStorage.setItem('profilePhoto', result);
+          }
+        };
+        reader.readAsDataURL(selectedFile);
+      }
+    };
+    const [name, setName] = useState('');
+    const [email, setEmail] = useState('');
+    const [phone, setPhone] = useState('');
+    const [department, setDepartment] = useState('');
+    const [bio, setBio] = useState('');
+    React.useEffect(() => {
+      const saved = localStorage.getItem('profileData');
+      if (saved) {
+        const data = JSON.parse(saved);
+        setName(data.name || user?.name || '');
+        setEmail(data.email || user?.email || '');
+        setPhone(data.phone || '+1 (555) 123-4567');
+        setDepartment(data.department || 'Sales');
+        setBio(data.bio || 'Experienced real estate professional with over 5 years in the industry.');
+      } else {
+        setName(user?.name || '');
+        setEmail(user?.email || '');
+        setPhone('+1 (555) 123-4567');
+        setDepartment('Sales');
+        setBio('Experienced real estate professional with over 5 years in the industry.');
+      }
+    }, [user]);
+    const [success, setSuccess] = useState(false);
+
+    const handleSave = () => {
+      const profileData = { name, email, phone, department, bio };
+      localStorage.setItem('profileData', JSON.stringify(profileData));
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 2000);
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between mb-4">
       <div className="flex items-center gap-6">
         <div className="avatar avatar-lg">
-          {user?.name.charAt(0)}
+          {photo ? (
+            <img src={photo} alt="Profile" className="w-16 h-16 rounded-full object-cover" />
+          ) : (
+            name.charAt(0)
+          )}
         </div>
         <div>
-          <h3 className="text-xl font-semibold text-gray-900">{user?.name}</h3>
+          <h3 className="text-xl font-semibold text-gray-900">{name}</h3>
           <p className="text-gray-600 capitalize">{user?.role} • {tenant?.name}</p>
-          <button className="text-sm text-indigo-600 hover:text-indigo-700 font-medium mt-1">
+          <button
+            className="text-sm text-indigo-600 hover:text-indigo-700 font-medium mt-1"
+            onClick={() => fileInputRef.current && fileInputRef.current.click()}
+          >
             Change Photo
           </button>
-        </div>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Full Name
-          </label>
           <input
-            type="text"
-            defaultValue={user?.name}
-            className="form-input"
-          />
-        </div>
-        
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Email Address
-          </label>
-          <input
-            type="email"
-            defaultValue={user?.email}
-            className="form-input"
-          />
-        </div>
-        
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Phone Number
-          </label>
-          <input
-            type="tel"
-            defaultValue="+1 (555) 123-4567"
-            className="form-input"
-          />
-        </div>
-        
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Department
-          </label>
-          <select className="form-input">
-            <option>Sales</option>
-            <option>Marketing</option>
-            <option>Support</option>
-            <option>Administration</option>
-          </select>
-        </div>
-
-        <div className="md:col-span-2">
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Bio
-          </label>
-          <textarea
-            rows={4}
-            className="form-input"
-            placeholder="Tell us about yourself..."
-            defaultValue="Experienced real estate professional with over 5 years in the industry."
+            type="file"
+            accept="image/*"
+            ref={fileInputRef}
+            className="hidden"
+            onChange={handlePhotoChange}
           />
         </div>
       </div>
-    </div>
-  );
+          <button
+            className="bg-blue-600 text-white px-5 py-2.5 rounded-lg shadow-md font-semibold transition-colors hover:bg-blue-700"
+            onClick={handleSave}
+          >
+            Save Changes
+          </button>
+        </div>
+        {success && (
+          <div className="text-green-600 font-semibold mt-2">Changes saved!</div>
+        )}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Full Name
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              className="form-input"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Email Address
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              className="form-input"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Phone Number
+            </label>
+            <input
+              type="tel"
+              value={phone}
+              onChange={e => setPhone(e.target.value)}
+              className="form-input"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Department
+            </label>
+            <select
+              value={department}
+              onChange={e => setDepartment(e.target.value)}
+              className="form-input"
+            >
+              <option value="Sales">Sales</option>
+              <option value="Marketing">Marketing</option>
+              <option value="Support">Support</option>
+              <option value="Administration">Administration</option>
+            </select>
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Bio
+            </label>
+            <textarea
+              rows={4}
+              className="form-input"
+              placeholder="Tell us about yourself..."
+              value={bio}
+              onChange={e => setBio(e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   const NotificationsTab = () => (
     <div className="space-y-8">
+      <div className="mb-4">
+        <h2 className="text-2xl font-bold text-gray-900">Notifications</h2>
+      </div>
       <div className="space-y-4">
         <h3 className="text-lg font-semibold text-gray-900">Email Notifications</h3>
         
@@ -154,7 +240,7 @@ const Settings: React.FC = () => {
     </div>
   );
 
-  const SecurityTab = () => (
+    const SecurityTab = () => (
     <div className="space-y-8">
       <div className="space-y-6">
         <h3 className="text-lg font-semibold text-gray-900">Change Password</h3>
@@ -229,32 +315,7 @@ const Settings: React.FC = () => {
 
   const PreferencesTab = () => (
     <div className="space-y-8">
-      <div className="space-y-4">
-        <h3 className="text-lg font-semibold text-gray-900">Appearance</h3>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="p-4 border-2 border-indigo-200 bg-indigo-50 rounded-xl">
-            <div className="flex items-center gap-3">
-              <div className="w-4 h-4 bg-indigo-600 rounded-full"></div>
-              <div>
-                <div className="font-medium text-gray-900">Light Mode</div>
-                <div className="text-sm text-gray-500">Clean and bright interface</div>
-              </div>
-            </div>
-          </div>
-          
-          <div className="p-4 border-2 border-gray-200 bg-gray-50 rounded-xl opacity-50">
-            <div className="flex items-center gap-3">
-              <div className="w-4 h-4 bg-gray-800 rounded-full"></div>
-              <div>
-                <div className="font-medium text-gray-900">Dark Mode</div>
-                <div className="text-sm text-gray-500">Coming soon</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-      
+      {/* Appearance section removed, now in sidebar */}
       <div className="space-y-4">
         <h3 className="text-lg font-semibold text-gray-900">Language & Region</h3>
         
@@ -308,6 +369,24 @@ const Settings: React.FC = () => {
       </div>
     </div>
   );
+
+  const [companyLogo, setCompanyLogo] = useState<string | null>(() => {
+    return localStorage.getItem('companyLogo') || null;
+  });
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const result = ev.target?.result as string;
+        setCompanyLogo(result);
+        localStorage.setItem('companyLogo', result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const CompanyTab = () => (
     <div className="space-y-8">
@@ -402,14 +481,47 @@ const Settings: React.FC = () => {
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Company Logo
             </label>
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center">
-                <Building className="w-8 h-8 text-white" />
-              </div>
-              <button className="btn-secondary">
+            <div className="flex flex-row gap-6 min-h-[80px]" style={{alignItems: 'center'}}>
+              {companyLogo ? (
+                <img
+                  src={companyLogo}
+                  alt="Company Logo"
+                  className="w-20 h-20 object-cover rounded-xl border-2 border-indigo-400 bg-white shadow"
+                />
+              ) : (
+                <div className="w-20 h-20 flex items-center justify-center rounded-xl border-2 border-dashed border-indigo-400 bg-indigo-50">
+                  <Building className="w-10 h-10 text-indigo-400" />
+                </div>
+              )}
+              <button
+                type="button"
+                className="bg-blue-600 text-white px-5 py-2.5 rounded-lg flex items-center gap-2 shadow-md font-semibold transition-colors hover:bg-blue-700"
+                style={{ minWidth: 140, alignSelf: 'center' }}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                 Upload Logo
               </button>
+              <input
+                type="file"
+                accept="image/*"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={handleLogoUpload}
+              />
             </div>
+            {companyLogo && (
+              <button
+                type="button"
+                className="text-xs text-red-500 mt-2 underline"
+                onClick={() => {
+                  setCompanyLogo(null);
+                  localStorage.removeItem('companyLogo');
+                }}
+              >
+                Remove Logo
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -475,14 +587,8 @@ const Settings: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Settings</h1>
-            <p className="text-gray-600">Manage your account and preferences</p>
           </div>
-          <button className="btn-primary flex items-center gap-2">
-            <Save size={20} />
-            Save Changes
-          </button>
         </div>
-
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Tabs */}
           <div className="lg:col-span-1">
@@ -506,7 +612,6 @@ const Settings: React.FC = () => {
               })}
             </nav>
           </div>
-
           {/* Tab Content */}
           <div className="lg:col-span-3">
             <div className="card p-8">

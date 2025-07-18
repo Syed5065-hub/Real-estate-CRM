@@ -17,6 +17,8 @@ import Analytics from './components/Admin/Analytics';
 import Settings from './components/Shared/Settings';
 import Meetings from './components/Shared/Meetings';
 
+// Removed duplicate named import for Contacts
+
 function AppContent() {
   const { user, tenant, portal, canAccessPortal } = useAuth();
   const [currentView, setCurrentView] = useState('dashboard');

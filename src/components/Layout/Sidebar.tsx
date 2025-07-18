@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   Home, 
   Users, 
@@ -61,6 +61,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) => {
       case 'client':
         if (!canAccessPortal('client')) return [];
         return [
+          { id: 'dashboard', label: 'Dashboard', icon: Home },
           { id: 'client-view', label: 'Browse Properties', icon: Building },
           { id: 'shortlisted', label: 'Shortlisted', icon: Home },
           { id: 'meetings', label: 'My Meetings', icon: Calendar },
@@ -103,6 +104,15 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) => {
 
   const getTenantTypeLabel = () => {
     return tenant?.type === 'organization' ? 'Organization' : 'Sole Proprietor';
+  };
+
+  // Theme state (persisted in localStorage)
+  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+  const handleThemeToggle = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+    document.documentElement.classList.toggle('dark', newTheme === 'dark');
   };
 
   return (
@@ -165,15 +175,43 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange }) => {
             <button
               key={item.id}
               onClick={() => onViewChange(item.id)}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all font-medium ${
-                isActive ? `active ${getActiveItemColor()} border` : ''
+              className={`sidebar-menu-btn w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-left transition-all font-medium border-l-4 ${
+                isActive
+                  ? `${getActiveItemColor()} border-l-4 ${
+                      portal === 'admin'
+                        ? 'border-indigo-500 shadow-sm'
+                        : portal === 'realtor'
+                        ? 'border-violet-500 shadow-sm'
+                        : 'border-emerald-500 shadow-sm'
+                    }`
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900 border-l-transparent'
               }`}
             >
-              <Icon size={20} />
-              <span>{item.label}</span>
+              <Icon size={18} className={isActive ? '' : 'text-gray-400'} />
+              <span className={`truncate ${isActive ? '' : 'text-gray-700'}`}>{item.label}</span>
             </button>
           );
         })}
+
+        {/* Theme Toggle */}
+        <div className="mt-8 px-4">
+          <div className="text-xs font-semibold text-gray-400 mb-2 uppercase tracking-wider">Appearance</div>
+          <div className="flex items-center gap-3 p-3 bg-gray-50 border border-gray-100 rounded-xl shadow-sm">
+            <span className="text-sm font-medium text-gray-700 flex-1 flex items-center gap-2">
+              <svg xmlns='http://www.w3.org/2000/svg' className="h-5 w-5 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="5" stroke="currentColor" strokeWidth="2" fill="currentColor" /></svg>
+              Light
+            </span>
+            <label className="inline-flex relative items-center cursor-pointer">
+              <input type="checkbox" checked={theme === 'dark'} onChange={handleThemeToggle} className="sr-only peer" />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-500 rounded-full peer dark:bg-gray-700 peer-checked:bg-blue-600 transition-all"></div>
+              <div className="absolute left-1 top-1 bg-white w-4 h-4 rounded-full shadow-md transition-all peer-checked:translate-x-5"></div>
+            </label>
+            <span className="text-sm font-medium text-gray-700 flex items-center gap-2">
+              <svg xmlns='http://www.w3.org/2000/svg' className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12.79A9 9 0 1111.21 3a7 7 0 109.79 9.79z" /></svg>
+              Dark
+            </span>
+          </div>
+        </div>
       </nav>
 
       {/* User Profile & Logout */}
